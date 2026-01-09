@@ -6,6 +6,7 @@ export function applyChanges(
     selection: readonly SceneNode[],
     satDelta: number,
     lightDelta: number,
+    hueDelta: number,
     options: ApplyOptions,
     reportProgress: (processed: number, total: number) => void
 ): Metrics {
@@ -43,7 +44,7 @@ export function applyChanges(
                         }
 
                         if (paint.type === 'SOLID') {
-                            const adjusted = adjustColor({ ...paint.color, a: paint.opacity ?? 1 }, satDelta, lightDelta);
+                            const adjusted = adjustColor({ ...paint.color, a: paint.opacity ?? 1 }, satDelta, lightDelta, hueDelta, options);
                             fills.push({
                                 ...paint,
                                 color: { r: adjusted.r, g: adjusted.g, b: adjusted.b }
@@ -53,7 +54,7 @@ export function applyChanges(
 
                         } else if (paint.type === 'GRADIENT_LINEAR' || paint.type === 'GRADIENT_RADIAL' || paint.type === 'GRADIENT_ANGULAR' || paint.type === 'GRADIENT_DIAMOND') {
                             const newStops = paint.gradientStops.map(stop => {
-                                const adjusted = adjustColor(stop.color, satDelta, lightDelta);
+                                const adjusted = adjustColor(stop.color, satDelta, lightDelta, hueDelta, options);
                                 return { ...stop, color: adjusted };
                             });
                             fills.push({ ...paint, gradientStops: newStops });
@@ -86,7 +87,7 @@ export function applyChanges(
                         }
 
                         if (paint.type === 'SOLID') {
-                            const adjusted = adjustColor({ ...paint.color, a: paint.opacity ?? 1 }, satDelta, lightDelta);
+                            const adjusted = adjustColor({ ...paint.color, a: paint.opacity ?? 1 }, satDelta, lightDelta, hueDelta, options);
                             strokes.push({
                                 ...paint,
                                 color: { r: adjusted.r, g: adjusted.g, b: adjusted.b }
@@ -96,7 +97,7 @@ export function applyChanges(
 
                         } else if (paint.type === 'GRADIENT_LINEAR' || paint.type === 'GRADIENT_RADIAL' || paint.type === 'GRADIENT_ANGULAR' || paint.type === 'GRADIENT_DIAMOND') {
                             const newStops = paint.gradientStops.map(stop => {
-                                const adjusted = adjustColor(stop.color, satDelta, lightDelta);
+                                const adjusted = adjustColor(stop.color, satDelta, lightDelta, hueDelta, options);
                                 return { ...stop, color: adjusted };
                             });
                             strokes.push({ ...paint, gradientStops: newStops });
@@ -128,9 +129,18 @@ export function applyChanges(
                             continue;
                         }
 
-                        if (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW') {
+                        // 细分控制逻辑
+                        let shouldProcess = false;
+                        if (effect.type === 'DROP_SHADOW') {
+                            // 如果 options.includeDropShadows 未定义，则默认为 true (兼容 includeEffects)
+                            shouldProcess = options.includeDropShadows !== false;
+                        } else if (effect.type === 'INNER_SHADOW') {
+                            shouldProcess = options.includeInnerShadows !== false;
+                        }
+
+                        if (shouldProcess && (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW')) {
                             const shadowEffect = effect as DropShadowEffect | InnerShadowEffect;
-                            const adjusted = adjustColor(shadowEffect.color, satDelta, lightDelta);
+                            const adjusted = adjustColor(shadowEffect.color, satDelta, lightDelta, hueDelta, options);
                             // 创建新的 effect 对象
                             effects.push({
                                 ...shadowEffect,
@@ -138,14 +148,12 @@ export function applyChanges(
                             } as Effect);
                             modified = true;
                             metrics.modifiedEffects!++;
-                            console.log('Shadow modified:', shadowEffect.color, '->', adjusted);
                         } else {
                             effects.push(effect);
                         }
                     }
 
                     if (modified) {
-                        console.log('Applying effects to node:', node.name, effects);
                         node.effects = effects;
                     }
                 }

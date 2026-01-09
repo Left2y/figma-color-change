@@ -24,11 +24,13 @@ async function build() {
     // 3. 读取 HTML 模板和编译后的 JS
     const htmlTemplate = fs.readFileSync('src/ui.html', 'utf-8');
     const uiJs = fs.readFileSync('dist/ui-temp.js', 'utf-8');
+    const iroJs = fs.readFileSync('src/iro.min.js', 'utf-8');
 
-    // 4. 把 <script src="ui.js"> 替换成内联脚本
+    // 4. 把 <script src="ui.js"> 替换成内联脚本（包含库和业务逻辑）
+    // 注意：库文件 (iroJs) 必须在业务逻辑 (uiJs) 之前
     const finalHtml = htmlTemplate.replace(
         '<script src="ui.js"></script>',
-        `<script>\n${uiJs}\n</script>`
+        `<script>\n${iroJs}\n</script>\n<script>\n${uiJs}\n</script>`
     );
 
     // 5. 写入最终的 ui.html

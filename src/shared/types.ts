@@ -26,24 +26,52 @@ export interface ScanOptions {
 export interface ApplyOptions {
     includeFills: boolean;
     includeStrokes: boolean;
-    includeEffects: boolean;
+    includeEffects: boolean; // 保持兼容，内部逻辑拆分
+    // V2 New Options
+    keepWhite: boolean;
+    keepBlack: boolean;
+    keepGray: boolean;
+    // 细化的 Effect 控制 (可选，如果 includeEffects 为 true 则这两个都为 true)
+    includeInnerShadows?: boolean;
+    includeDropShadows?: boolean;
 }
 
 // UI -> Main Messages
-export type ScanRequest = { type: 'SCAN_REQUEST'; options: ScanOptions };
-export type ApplyRequest = {
+export interface ScanRequest {
+    type: 'SCAN_REQUEST';
+    options: {
+        includeFills: boolean;
+        includeStrokes: boolean;
+        includeEffects: boolean;
+    };
+}
+export interface ApplyRequest {
     type: 'APPLY_REQUEST';
+    satDelta: number;
+    lightDelta: number;
+    hueDelta: number; // New in V2: 0-360
     options: ApplyOptions;
-    satDelta: number;   // -1 ~ +1
-    lightDelta: number; // -1 ~ +1
-};
+}
 
 export type PluginMessage = ScanRequest | ApplyRequest;
 
 // Main -> UI Messages
-export type ScanResult = { type: 'SCAN_RESULT'; palette: PaletteItem[]; metrics: Metrics };
-export type ApplyResult = { type: 'APPLY_RESULT'; metrics: Metrics };
-export type Progress = { type: 'PROGRESS'; processed: number; total?: number };
-export type ErrorMsg = { type: 'ERROR'; message: string };
+export interface UIMessage {
+    type: 'SCAN_RESULT' | 'APPLY_RESULT' | 'ERROR' | 'PROGRESS';
+    palette?: PaletteItem[];
+    metrics?: Metrics;
+    message?: string;
+    processed?: number;
+    total?: number;
+}
 
-export type UIMessage = ScanResult | ApplyResult | Progress | ErrorMsg;
+export interface ScanResult extends UIMessage {
+    type: 'SCAN_RESULT';
+    palette: PaletteItem[];
+    metrics: Metrics;
+}
+
+export interface ApplyResult extends UIMessage {
+    type: 'APPLY_RESULT';
+    metrics: Metrics;
+}

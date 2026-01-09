@@ -1,115 +1,367 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
     <meta charset="UTF-8">
-    <title>Color Adjuster</title>
+    <title>Quick Hues</title>
     <style>
+        :root {
+            --bg-color: #2C2C2C;
+            --text-color: #EEEEEE;
+            --text-muted: #AAAAAA;
+            --accent-color: #18A0FB;
+            --border-color: #444444;
+            --panel-bg: #363636;
+        }
+
         body {
-            font-family: sans-serif;
+            font-family: 'Inter', sans-serif;
             padding: 16px;
             margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+            /* Prevent body scroll */
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 3px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
 
         h2 {
-            margin-top: 0;
-            font-size: 16px;
-            margin-bottom: 16px;
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .section {
+        .btn-icon {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .btn-icon:hover {
+            color: var(--text-color);
+        }
+
+        /* Top Actions */
+        .top-actions {
+            display: flex;
+            justify-content: space-between;
             margin-bottom: 24px;
+        }
+
+        .dropdown {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-small {
+            background: #444;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-small:hover {
+            background: #555;
+            color: var(--text-color);
+        }
+
+        /* Color Wheel Container */
+        #wheel-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        /* Sliders */
+        .slider-group {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
         }
 
         .row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
 
-        button {
-            width: 100%;
-            padding: 8px;
-            cursor: pointer;
-            background: #18A0FB;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-weight: bold;
-        }
-
-        button:disabled {
-            background: #B3B3B3;
-            cursor: not-allowed;
+        .row:last-child {
+            margin-bottom: 0;
         }
 
         label {
             font-size: 12px;
-            color: #333;
+            color: var(--text-muted);
+            width: 40px;
         }
 
         input[type="range"] {
             flex: 1;
-            margin-left: 8px;
+            margin: 0 12px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
         }
 
-        #palette-list {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
-            gap: 4px;
-            margin-bottom: 16px;
-            max-height: 200px;
-            overflow-y: auto;
+        .val-display {
+            font-size: 12px;
+            color: var(--text-color);
+            width: 40px;
+            text-align: right;
+            font-feature-settings: "tnum";
         }
 
-        .swatch {
-            width: 24px;
-            height: 24px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
+        /* Apply Button */
+        .btn-primary {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
         }
 
-        #stats {
+        .btn-primary:active {
+            background: #0D8DE3;
+        }
+
+        /* Stats & Settings Panel (Hidden by default) */
+        .footer-info {
             font-size: 11px;
             color: #666;
-            margin-top: 16px;
-            white-space: pre-wrap;
+            margin-top: 12px;
+            text-align: center;
         }
 
-        .error {
-            color: red;
+        /* Overlay for Settings */
+        #settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
+            /* hidden */
+        }
+
+        #settings-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-color);
+            border-radius: 12px 12px 0 0;
+            padding: 16px;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+
+        #settings-panel.open {
+            transform: translateY(0);
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .setting-group-title {
             font-size: 11px;
-            margin-top: 8px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 32px;
+            height: 18px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent-color);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(14px);
         }
     </style>
 </head>
 
 <body>
-    <div class="section">
-        <button id="scan-btn">Scan Selection</button>
-    </div>
 
-    <div id="palette-list">
-        <!-- Palette items will be injected here -->
-    </div>
+    <header>
+        <h2>🎨 Quick Hues</h2>
+        <button class="btn-icon" id="settings-btn">⚙️</button>
+    </header>
 
-    <div class="section" id="adjust-section" style="opacity: 0.5; pointer-events: none;">
-        <div class="row">
-            <label>Saturation</label>
-            <input type="range" id="sat-range" min="-100" max="100" value="0">
-            <span id="sat-val">0%</span>
+    <div class="top-actions">
+        <div class="dropdown">
+            <span>Colors: All</span>
+            <span style="font-size: 8px;">▼</span>
         </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-small" id="desaturate-btn">去饱和</button>
+            <button class="btn-small" id="reset-btn">重置</button>
+        </div>
+    </div>
+
+    <div id="wheel-container">
+        <!-- Iro.js will inject here -->
+    </div>
+
+    <div class="slider-group">
         <div class="row">
-            <label>Lightness</label>
+            <label>亮度</label>
             <input type="range" id="light-range" min="-100" max="100" value="0">
-            <span id="light-val">0%</span>
+            <span class="val-display" id="light-val">0</span>
         </div>
-        <button id="apply-btn">Apply Changes</button>
+        <div class="row">
+            <label>饱和</label>
+            <input type="range" id="sat-range" min="-100" max="100" value="0">
+            <span class="val-display" id="sat-val">0</span>
+        </div>
     </div>
 
-    <div id="stats"></div>
-    <div id="error-msg" class="error"></div>
+    <button class="btn-primary" id="apply-btn">Apply Changes</button>
+
+    <div class="footer-info" id="stats">Ready to scan</div>
+    <div class="footer-info" style="color:red" id="error-msg"></div>
+
+    <!-- Settings Overlay -->
+    <div id="settings-overlay">
+        <div id="settings-panel">
+            <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+                <span style="font-weight:600;">设置</span>
+                <span style="cursor:pointer;" id="close-settings">✕</span>
+            </div>
+
+            <div class="setting-group-title">颜色保留</div>
+            <div class="setting-item">
+                <span>保留白色</span>
+                <label class="toggle"><input type="checkbox" id="keep-white" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>保留黑色</span>
+                <label class="toggle"><input type="checkbox" id="keep-black" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>保留灰色</span>
+                <label class="toggle"><input type="checkbox" id="keep-gray"><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-group-title" style="margin-top:16px;">作用范围</div>
+            <div class="setting-item">
+                <span>填充 (Fills)</span>
+                <label class="toggle"><input type="checkbox" id="scope-fills" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>描边 (Strokes)</span>
+                <label class="toggle"><input type="checkbox" id="scope-strokes" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>内阴影 (Inner)</span>
+                <label class="toggle"><input type="checkbox" id="scope-inner-shadow" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>外阴影 (Drop)</span>
+                <label class="toggle"><input type="checkbox" id="scope-drop-shadow" checked><span
+                        class="slider"></span></label>
+            </div>
+        </div>
+    </div>
 
     <script src="ui.js"></script>
 </body>

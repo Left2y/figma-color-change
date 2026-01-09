@@ -1,4 +1,8 @@
-import { RGBA01 } from '../shared/types';
+export interface RGB {
+    r: number;
+    g: number;
+    b: number;
+}
 
 export interface HSL {
     h: number; // 0-360
@@ -6,6 +10,16 @@ export interface HSL {
     l: number; // 0-1
 }
 
+/**
+ * Utility to clamp value between min and max
+ */
+export function clamp(v: number, min: number, max: number): number {
+    return Math.min(Math.max(v, min), max);
+}
+
+/**
+ * Convert RGB (0-1) to HSL
+ */
 export function rgbToHsl(r: number, g: number, b: number): HSL {
     const max = Math.max(r, g, b);
     const min = Math.min(r, g, b);
@@ -14,7 +28,6 @@ export function rgbToHsl(r: number, g: number, b: number): HSL {
     if (max !== min) {
         const d = max - min;
         s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
         switch (max) {
             case r: h = (g - b) / d + (g < b ? 6 : 0); break;
             case g: h = (b - r) / d + 2; break;
@@ -26,7 +39,10 @@ export function rgbToHsl(r: number, g: number, b: number): HSL {
     return { h, s, l };
 }
 
-export function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+/**
+ * Convert HSL to RGB (0-1)
+ */
+export function hslToRgb(h: number, s: number, l: number): RGB {
     let r, g, b;
 
     if (s === 0) {
@@ -49,8 +65,4 @@ export function hslToRgb(h: number, s: number, l: number): { r: number; g: numbe
     }
 
     return { r, g, b };
-}
-
-export function clamp(v: number, min: number, max: number) {
-    return Math.min(Math.max(v, min), max);
 }
