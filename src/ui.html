@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Color Adjuster</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 16px;
+            margin: 0;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+
+        .section {
+            margin-bottom: 24px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 8px;
+            cursor: pointer;
+            background: #18A0FB;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        button:disabled {
+            background: #B3B3B3;
+            cursor: not-allowed;
+        }
+
+        label {
+            font-size: 12px;
+            color: #333;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            margin-left: 8px;
+        }
+
+        #palette-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(24px, 1fr));
+            gap: 4px;
+            margin-bottom: 16px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .swatch {
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        #stats {
+            font-size: 11px;
+            color: #666;
+            margin-top: 16px;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            color: red;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="section">
+        <button id="scan-btn">Scan Selection</button>
+    </div>
+
+    <div id="palette-list">
+        <!-- Palette items will be injected here -->
+    </div>
+
+    <div class="section" id="adjust-section" style="opacity: 0.5; pointer-events: none;">
+        <div class="row">
+            <label>Saturation</label>
+            <input type="range" id="sat-range" min="-100" max="100" value="0">
+            <span id="sat-val">0%</span>
+        </div>
+        <div class="row">
+            <label>Lightness</label>
+            <input type="range" id="light-range" min="-100" max="100" value="0">
+            <span id="light-val">0%</span>
+        </div>
+        <button id="apply-btn">Apply Changes</button>
+    </div>
+
+    <div id="stats"></div>
+    <div id="error-msg" class="error"></div>
+
+    <script src="ui.js"></script>
+</body>
+
+</html>
