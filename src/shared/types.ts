@@ -49,7 +49,11 @@ export interface ApplyRequest {
     type: 'APPLY_REQUEST';
     satDelta: number;
     lightDelta: number;
-    hueDelta: number; // New in V2: 0-360
+    hueDelta: number; // 0-360, fallback for Global mode
+    // V2.1: Mapping Mode
+    colorMapping?: {
+        [originalKey: string]: number // hueDelta
+    };
     options: ApplyOptions;
 }
 

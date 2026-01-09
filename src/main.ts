@@ -40,7 +40,8 @@ figma.ui.onmessage = async (msg: PluginMessage) => {
                 selection,
                 msg.satDelta,
                 msg.lightDelta,
-                msg.hueDelta, // V2 New param
+                msg.hueDelta,
+                msg.colorMapping, // V2.1
                 msg.options,
                 (processed, total) => {
                     figma.ui.postMessage({ type: 'PROGRESS', processed, total });

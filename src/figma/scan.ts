@@ -1,21 +1,6 @@
 import { PaletteItem, ScanOptions, Metrics, RGBA01 } from '../shared/types';
 import { traverse } from './traverse';
-
-function toColorKey(r: number, g: number, b: number, a: number): string {
-    const R = Math.round(r * 255);
-    const G = Math.round(g * 255);
-    const B = Math.round(b * 255);
-    const A = Math.round(a * 255);
-    return `${R},${G},${B},${A}`;
-}
-
-function toHex(r: number, g: number, b: number): string {
-    const toHex1 = (v: number) => {
-        const hex = Math.round(v * 255).toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-    };
-    return `#${toHex1(r)}${toHex1(g)}${toHex1(b)}`.toUpperCase();
-}
+import { toColorKey, toHex } from '../shared/color-utils';
 
 function almostEqual(a: number, b: number) {
     return Math.abs(a - b) < 0.001;

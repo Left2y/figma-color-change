@@ -1,4 +1,5 @@
 import { UIMessage, ScanRequest, ApplyRequest, ApplyOptions, PaletteItem } from './shared/types';
+import { toColorKey } from './shared/color-utils';
 
 // Declare iro global
 declare const iro: any;
@@ -8,6 +9,7 @@ let hasScanned = false;
 
 // UI Elements
 const wheelContainer = document.getElementById('wheel-container')!;
+const lockBtn = document.getElementById('lock-btn')!;
 const satRange = document.getElementById('sat-range') as HTMLInputElement;
 const lightRange = document.getElementById('light-range') as HTMLInputElement;
 const satVal = document.getElementById('sat-val')!;
@@ -37,17 +39,20 @@ const resetBtn = document.getElementById('reset-btn')!;
 // State
 let currentSat = 0;
 let currentLight = 0;
-let currentHueDelta = 0;
+
+let isLinked = true;
+let currentHueDelta = 0; // Global delta
+let hueDeltas: { [key: string]: number } = {}; // Individual overrides { key: delta }
 
 // Store original HSL values of the palette to calculate delta
-let originalColors: { h: number, s: number, l: number }[] = [];
+// Added 'key' to identify specific colors
+let originalColors: { h: number, s: number, l: number, key: string }[] = [];
 let activeIndex = -1; // Index of the color being dragged
 
 // Initialize Iro JS Color Wheel
 function initColorWheel() {
     colorPicker = new iro.ColorPicker("#wheel-container", {
         width: 160,
-        // color: "hsl(0, 100%, 50%)", // Removed, set dynamically
         borderWidth: 2,
         borderColor: "#fff",
         layout: [
@@ -58,11 +63,10 @@ function initColorWheel() {
         ]
     });
 
-    // --- Linked Hue Rotation Logic ---
+    // --- Interaction Logic ---
 
     // 1. When specific handle starts dragging
     colorPicker.on('input:start', (color: any) => {
-        // Find which color index is being dragged
         activeIndex = color.index;
     });
 
@@ -70,50 +74,37 @@ function initColorWheel() {
     colorPicker.on('input:move', (color: any) => {
         if (activeIndex === -1 || !originalColors.length) return;
 
-        // Logic: 
-        // 1. Get current H of the active handle
         const currentH = color.hsl.h;
-        // 2. Get its original H
-        const originalH = originalColors[activeIndex].h;
-        // 3. Calculate global delta
+        const original = originalColors[activeIndex];
+        const originalH = original.h;
+
         let delta = currentH - originalH;
 
-        // Normalize delta to ensure smooth rotation logic globally?
-        // Actually, we just need to send this delta to Main.
-        // But for UI visualization, we must update OTHER handles too.
+        if (isLinked) {
+            // LINKED MODE: Global Rotation
+            currentHueDelta = delta;
+            hueDeltas = {}; // Clear individual overrides
 
-        // Update global state
-        currentHueDelta = delta;
-
-        // Update other handles in the UI so they spin together
-        // We use `setColors` or update individual color objects?
-        // iro.js `colorPicker.colors` is array.
-
-        // To avoid infinite loop, we temporarily unbind or use a flag, 
-        // OR we manually value set without firing events?
-        // iro.js typically fires events on set.
-
-        // BETTER APPROACH:
-        // Update all OTHER colors based on their original + delta.
-        colorPicker.colors.forEach((c: any, index: number) => {
-            if (index !== activeIndex) {
-                let newH = (originalColors[index].h + delta) % 360;
-                if (newH < 0) newH += 360;
-                // Set Hue only. Preserve active S/L or original S/L?
-                // Usually user just rotates hue.
-                c.hsl = { h: newH, s: originalColors[index].s, l: originalColors[index].l };
-            }
-        });
+            // Update all OTHER colors
+            colorPicker.colors.forEach((c: any, index: number) => {
+                if (index !== activeIndex) {
+                    let newH = (originalColors[index].h + delta) % 360;
+                    if (newH < 0) newH += 360;
+                    c.hsl = { h: newH, s: originalColors[index].s, l: originalColors[index].l };
+                }
+            });
+        } else {
+            // UNLINKED MODE: Individual Adjustment
+            hueDeltas[original.key] = delta;
+            // Only the dragged handle updates (handled by iro.js internally)
+        }
     });
 
-    // 3. Reset active index on end
     colorPicker.on('input:end', () => {
-        // activeIndex = -1; // Handle persistence? No need.
     });
 }
 
 // Convert palette item's RGBA to HSL for display
-// We need a helper or just rely on 'ScanResult' giving us RGBA, convert here.
 function rgbToHsl(r: number, g: number, b: number) {
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
     let h = 0, s = 0, l = (max + min) / 2;
@@ -130,7 +121,6 @@ function rgbToHsl(r: number, g: number, b: number) {
     return { h: h < 0 ? h + 360 : h, s: s * 100, l: l * 100 };
 }
 
-// Helper to send scan request
 function scan() {
     const msg: ScanRequest = {
         type: 'SCAN_REQUEST',
@@ -146,33 +136,51 @@ function scan() {
     statsDiv.textContent = 'Scanning...';
 }
 
-// Reset all controls
 function reset() {
     currentSat = 0;
     currentLight = 0;
     currentHueDelta = 0;
+    hueDeltas = {};
 
     satRange.value = '0';
     lightRange.value = '0';
     satVal.textContent = '0';
     lightVal.textContent = '0';
 
-    // Reset colors to original state
+    // Reset colors
     if (colorPicker && originalColors.length > 0) {
         const resetColors = originalColors.map(c => ({ h: c.h, s: c.s, l: c.l }));
         colorPicker.setColors(resetColors);
     }
 }
 
+// Toggle Lock
+lockBtn.onclick = () => {
+    isLinked = !isLinked;
+    lockBtn.textContent = isLinked ? '🔗' : '🔓';
+    lockBtn.title = isLinked ? '切换到独立模式' : '切换到联动模式';
+
+    // If switching back to Linked, clear overrides and align to global?
+    // User expectation: maybe reset to current average? Or reset to 0?
+    // Simplest: Reset overrides, snapping everything back to Global Hue Delta.
+    if (isLinked) {
+        hueDeltas = {};
+        // Re-apply global delta to all handles
+        colorPicker.colors.forEach((c: any, index: number) => {
+            let newH = (originalColors[index].h + currentHueDelta) % 360;
+            if (newH < 0) newH += 360;
+            c.hsl = { h: newH, s: originalColors[index].s, l: originalColors[index].l };
+        });
+    }
+};
+
 // --- Event Listeners ---
 
 window.onload = () => {
     initColorWheel();
-    // Auto scan on load
     setTimeout(scan, 100);
 };
 
-// Sliders
 satRange.oninput = () => {
     currentSat = parseInt(satRange.value) / 100;
     satVal.textContent = satRange.value;
@@ -206,6 +214,7 @@ applyBtn.onclick = () => {
         satDelta: currentSat,
         lightDelta: currentLight,
         hueDelta: currentHueDelta,
+        colorMapping: Object.keys(hueDeltas).length > 0 ? hueDeltas : undefined,
         options
     };
     parent.postMessage({ pluginMessage: msg }, '*');
@@ -227,7 +236,6 @@ settingsOverlay.onclick = (e) => {
     if (e.target === settingsOverlay) closeSettings();
 };
 
-// Top Actions
 resetBtn.onclick = reset;
 desaturateBtn.onclick = () => {
     currentSat = -1;
@@ -244,28 +252,25 @@ onmessage = (event: MessageEvent) => {
         hasScanned = true;
         statsDiv.textContent = `Scanned ${msg.metrics?.visitedNodes} nodes. Found ${msg.palette?.length || 0} colors.`;
 
-        // UPDATE COLOR WHEEL
         if (msg.palette && msg.palette.length > 0) {
-            // Convert to HSL and filter redundant hues?
-            // User requested "Show included colors".
-            // We limit to top 15 unique colors to prevent crashing UI.
             const colorsToShow = msg.palette.slice(0, 15).map(p => {
                 const hsl = rgbToHsl(p.rgba.r, p.rgba.g, p.rgba.b);
-                return hsl;
+                // Generate key locally to be sure
+                const key = toColorKey(p.rgba.r, p.rgba.g, p.rgba.b, p.rgba.a);
+                return { ...hsl, key };
             });
 
-            // Set to Picker
-            colorPicker.setColors(colorsToShow);
+            colorPicker.setColors(colorsToShow); // iro.js ignores extra props 'key'
 
-            // Save original state for delta calculation
+            // Save state
             originalColors = JSON.parse(JSON.stringify(colorsToShow));
             currentHueDelta = 0;
+            hueDeltas = {};
             activeIndex = -1;
 
         } else {
-            // No colors found? Set a default grey?
             colorPicker.setColors([{ h: 0, s: 0, l: 50 }]);
-            originalColors = [{ h: 0, s: 0, l: 50 }];
+            originalColors = [{ h: 0, s: 0, l: 50, key: '' }];
         }
 
     } else if (msg.type === 'APPLY_RESULT') {

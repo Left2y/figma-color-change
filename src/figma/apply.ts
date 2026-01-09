@@ -1,12 +1,14 @@
 import { ApplyOptions, Metrics } from '../shared/types';
 import { traverse } from './traverse';
 import { adjustColor } from '../color/color-adjust';
+import { toColorKey } from '../shared/color-utils';
 
 export function applyChanges(
     selection: readonly SceneNode[],
     satDelta: number,
     lightDelta: number,
     hueDelta: number,
+    colorMapping: { [key: string]: number } | undefined,
     options: ApplyOptions,
     reportProgress: (processed: number, total: number) => void
 ): Metrics {
@@ -54,7 +56,13 @@ export function applyChanges(
 
                         } else if (paint.type === 'GRADIENT_LINEAR' || paint.type === 'GRADIENT_RADIAL' || paint.type === 'GRADIENT_ANGULAR' || paint.type === 'GRADIENT_DIAMOND') {
                             const newStops = paint.gradientStops.map(stop => {
-                                const adjusted = adjustColor(stop.color, satDelta, lightDelta, hueDelta, options);
+                                const { r, g, b, a } = stop.color;
+                                const key = toColorKey(r, g, b, a);
+                                const effectiveHueDelta = (colorMapping && colorMapping[key] !== undefined)
+                                    ? colorMapping[key]
+                                    : hueDelta;
+
+                                const adjusted = adjustColor(stop.color, satDelta, lightDelta, effectiveHueDelta, options);
                                 return { ...stop, color: adjusted };
                             });
                             fills.push({ ...paint, gradientStops: newStops });
@@ -87,7 +95,14 @@ export function applyChanges(
                         }
 
                         if (paint.type === 'SOLID') {
-                            const adjusted = adjustColor({ ...paint.color, a: paint.opacity ?? 1 }, satDelta, lightDelta, hueDelta, options);
+                            const { r, g, b } = paint.color;
+                            const key = toColorKey(r, g, b, paint.opacity ?? 1);
+
+                            const effectiveHueDelta = (colorMapping && colorMapping[key] !== undefined)
+                                ? colorMapping[key]
+                                : hueDelta;
+
+                            const adjusted = adjustColor({ ...paint.color, a: paint.opacity ?? 1 }, satDelta, lightDelta, effectiveHueDelta, options);
                             strokes.push({
                                 ...paint,
                                 color: { r: adjusted.r, g: adjusted.g, b: adjusted.b }
@@ -97,7 +112,13 @@ export function applyChanges(
 
                         } else if (paint.type === 'GRADIENT_LINEAR' || paint.type === 'GRADIENT_RADIAL' || paint.type === 'GRADIENT_ANGULAR' || paint.type === 'GRADIENT_DIAMOND') {
                             const newStops = paint.gradientStops.map(stop => {
-                                const adjusted = adjustColor(stop.color, satDelta, lightDelta, hueDelta, options);
+                                const { r, g, b, a } = stop.color;
+                                const key = toColorKey(r, g, b, a);
+                                const effectiveHueDelta = (colorMapping && colorMapping[key] !== undefined)
+                                    ? colorMapping[key]
+                                    : hueDelta;
+
+                                const adjusted = adjustColor(stop.color, satDelta, lightDelta, effectiveHueDelta, options);
                                 return { ...stop, color: adjusted };
                             });
                             strokes.push({ ...paint, gradientStops: newStops });
@@ -114,8 +135,12 @@ export function applyChanges(
                 }
             }
 
-            // 3. Effects (阴影)
+            // 3. Effects
             if (options.includeEffects && 'effects' in node) {
+                // ... (Effect lookup is similar but simpler to keep concise here as Effect logic in scan might differ)
+                // Wait, Scan scans effects. Apply needs to map them.
+                // Effect color is RGBA.
+                // Let's implement Effect mapping.
                 const currentEffects = node.effects;
                 if (currentEffects === figma.mixed) {
                     metrics.skipped++;
@@ -124,15 +149,14 @@ export function applyChanges(
                     let modified = false;
 
                     for (const effect of currentEffects) {
+                        // ... visibility check
                         if (effect.visible === false) {
                             effects.push(effect);
                             continue;
                         }
 
-                        // 细分控制逻辑
                         let shouldProcess = false;
                         if (effect.type === 'DROP_SHADOW') {
-                            // 如果 options.includeDropShadows 未定义，则默认为 true (兼容 includeEffects)
                             shouldProcess = options.includeDropShadows !== false;
                         } else if (effect.type === 'INNER_SHADOW') {
                             shouldProcess = options.includeInnerShadows !== false;
@@ -140,7 +164,14 @@ export function applyChanges(
 
                         if (shouldProcess && (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW')) {
                             const shadowEffect = effect as DropShadowEffect | InnerShadowEffect;
-                            const adjusted = adjustColor(shadowEffect.color, satDelta, lightDelta, hueDelta, options);
+
+                            const { r, g, b, a } = shadowEffect.color;
+                            const key = toColorKey(r, g, b, a);
+                            const effectiveHueDelta = (colorMapping && colorMapping[key] !== undefined)
+                                ? colorMapping[key]
+                                : hueDelta;
+
+                            const adjusted = adjustColor(shadowEffect.color, satDelta, lightDelta, effectiveHueDelta, options);
                             // 创建新的 effect 对象
                             effects.push({
                                 ...shadowEffect,
