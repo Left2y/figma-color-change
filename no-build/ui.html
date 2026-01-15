@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Quick Hues</title>
+    <style>
+        :root {
+            --bg-color: #2C2C2C;
+            --text-color: #EEEEEE;
+            --text-muted: #AAAAAA;
+            --accent-color: #18A0FB;
+            --border-color: #444444;
+            --panel-bg: #363636;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            padding: 16px;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+            /* Prevent body scroll */
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 3px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-icon {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .btn-icon:hover {
+            color: var(--text-color);
+        }
+
+        /* Top Actions */
+        .top-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .dropdown {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            color: var(--text-color);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-small {
+            background: #444;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-small:hover {
+            background: #555;
+            color: var(--text-color);
+        }
+
+        /* Color Wheel Container */
+        #wheel-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        /* Sliders */
+        .slider-group {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .row:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            font-size: 12px;
+            color: var(--text-muted);
+            width: 40px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            margin: 0 12px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        .val-display {
+            font-size: 12px;
+            color: var(--text-color);
+            width: 40px;
+            text-align: right;
+            font-feature-settings: "tnum";
+        }
+
+        /* Apply Button */
+        .btn-primary {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-primary:active {
+            background: #0D8DE3;
+        }
+
+        /* Stats & Settings Panel (Hidden by default) */
+        .footer-info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        /* Overlay for Settings */
+        #settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
+            /* hidden */
+        }
+
+        #settings-panel {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-color);
+            border-radius: 12px 12px 0 0;
+            padding: 16px;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+        }
+
+        #settings-panel.open {
+            transform: translateY(0);
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .setting-group-title {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Toggle Switch */
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 32px;
+            height: 18px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 18px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent-color);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(14px);
+        }
+
+        /* 颜色占比条 - 外层容器 */
+        #color-bar-wrapper {
+            width: 100%;
+            height: 20px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        #color-bar {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .color-segment {
+            height: 100%;
+            position: relative;
+            cursor: default;
+            transition: transform 0.15s;
+        }
+
+        .color-segment:hover {
+            transform: scaleY(1.15);
+            z-index: 10;
+        }
+
+        /* 颜色条的悬停提示 - 0.25秒后显示 */
+        .color-segment .tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .color-segment:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transition: opacity 0.15s ease 0.25s, visibility 0s ease 0.25s;
+        }
+    </style>
+    <!-- Iro.js Library (Inlined for no-build) -->
+    <script src="https://cdn.jsdelivr.net/npm/@jaames/iro@5/dist/iro.min.js"></script>
+</head>
+
+<body>
+
+    <header>
+        <h2>🎨 Quick Hues</h2>
+        <button class="btn-icon" id="settings-btn">⚙️</button>
+    </header>
+
+    <div class="top-actions">
+        <div class="dropdown">
+            <span>Colors: All</span>
+            <span style="font-size: 8px;">▼</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn-small" id="desaturate-btn">去饱和</button>
+            <button class="btn-small" id="reset-btn">重置</button>
+        </div>
+    </div>
+
+    <div id="wheel-container" style="position:relative;">
+        <button id="lock-btn"
+            style="position:absolute; top:0; right:0; background:none; border:none; font-size:16px; cursor:pointer; z-index:10;"
+            title="切换联动模式">🔗</button>
+        <!-- Iro.js will inject here -->
+    </div>
+
+    <!-- 颜色占比条 (新增) -->
+    <div id="color-bar-wrapper">
+        <div id="color-bar">
+            <!-- 颜色块会由 JS 动态生成 -->
+        </div>
+    </div>
+
+    <div class="slider-group">
+        <div class="row">
+            <label>亮度</label>
+            <input type="range" id="light-range" min="-100" max="100" value="0">
+            <span class="val-display" id="light-val">0</span>
+        </div>
+        <div class="row">
+            <label>饱和</label>
+            <input type="range" id="sat-range" min="-100" max="100" value="0">
+            <span class="val-display" id="sat-val">0</span>
+        </div>
+    </div>
+
+    <button class="btn-primary" id="apply-btn">Apply Changes</button>
+
+    <div class="footer-info" id="stats">Ready to scan</div>
+    <div class="footer-info" style="color:red" id="error-msg"></div>
+
+    <!-- Settings Overlay -->
+    <div id="settings-overlay">
+        <div id="settings-panel">
+            <div style="display:flex; justify-content:space-between; margin-bottom:16px;">
+                <span style="font-weight:600;">设置</span>
+                <span style="cursor:pointer;" id="close-settings">✕</span>
+            </div>
+
+            <div class="setting-group-title">颜色保留</div>
+            <div class="setting-item">
+                <span>保留白色</span>
+                <label class="toggle"><input type="checkbox" id="keep-white" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>保留黑色</span>
+                <label class="toggle"><input type="checkbox" id="keep-black" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>保留灰色</span>
+                <label class="toggle"><input type="checkbox" id="keep-gray"><span class="slider"></span></label>
+            </div>
+
+            <div class="setting-group-title" style="margin-top:16px;">作用范围</div>
+            <div class="setting-item">
+                <span>填充 (Fills)</span>
+                <label class="toggle"><input type="checkbox" id="scope-fills" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>描边 (Strokes)</span>
+                <label class="toggle"><input type="checkbox" id="scope-strokes" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>内阴影 (Inner)</span>
+                <label class="toggle"><input type="checkbox" id="scope-inner-shadow" checked><span
+                        class="slider"></span></label>
+            </div>
+            <div class="setting-item">
+                <span>外阴影 (Drop)</span>
+                <label class="toggle"><input type="checkbox" id="scope-drop-shadow" checked><span
+                        class="slider"></span></label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Shared Utils (Inlined)
+        function toColorKey(r, g, b, a = 1) {
+            const R = Math.round(r * 255);
+            const G = Math.round(g * 255);
+            const B = Math.round(b * 255);
+            const A = Math.round(a * 255);
+            return `${R},${G},${B},${A}`;
+        }
+
+        // --- Main UI Logic ---
+
+        let colorPicker;
+        let hasScanned = false;
+
+        // UI Elements
+        const wheelContainer = document.getElementById('wheel-container');
+        const lockBtn = document.getElementById('lock-btn');
+        const satRange = document.getElementById('sat-range');
+        const lightRange = document.getElementById('light-range');
+        const satVal = document.getElementById('sat-val');
+        const lightVal = document.getElementById('light-val');
+        const applyBtn = document.getElementById('apply-btn');
+        const statsDiv = document.getElementById('stats');
+        const errorDiv = document.getElementById('error-msg');
+
+        const settingsBtn = document.getElementById('settings-btn');
+        const closeSettingsBtn = document.getElementById('close-settings');
+        const settingsPanel = document.getElementById('settings-panel');
+        const settingsOverlay = document.getElementById('settings-overlay');
+
+        // Settings Inputs
+        const keepWhiteCb = document.getElementById('keep-white');
+        const keepBlackCb = document.getElementById('keep-black');
+        const keepGrayCb = document.getElementById('keep-gray');
+        const scopeFillsCb = document.getElementById('scope-fills');
+        const scopeStrokesCb = document.getElementById('scope-strokes');
+        const scopeInnerShadowCb = document.getElementById('scope-inner-shadow');
+        const scopeDropShadowCb = document.getElementById('scope-drop-shadow');
+
+        // Top Actions
+        const desaturateBtn = document.getElementById('desaturate-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        // State
+        let currentSat = 0;
+        let currentLight = 0;
+
+        let isLinked = true;
+        let currentHueDelta = 0; // Global delta
+        let hueDeltas = {}; // Individual overrides { key: delta }
+
+        // Store original HSL values of the palette to calculate delta
+        let originalColors = [];
+        let activeIndex = -1; // Index of the color being dragged
+
+        // Initialize Iro JS Color Wheel
+        function initColorWheel() {
+            colorPicker = new iro.ColorPicker("#wheel-container", {
+                width: 160,
+                borderWidth: 2,
+                borderColor: "#fff",
+                layout: [
+                    {
+                        component: iro.ui.Wheel,
+                        options: {}
+                    }
+                ]
+            });
+
+            // --- Interaction Logic ---
+
+            // 1. When specific handle starts dragging
+            colorPicker.on('input:start', (color) => {
+                activeIndex = color.index;
+            });
+
+            // 2. When dragging
+            colorPicker.on('input:move', (color) => {
+                if (activeIndex === -1 || !originalColors.length) return;
+
+                const currentH = color.hsl.h;
+                const original = originalColors[activeIndex];
+                const originalH = original.h;
+
+                let delta = currentH - originalH;
+
+                if (isLinked) {
+                    // LINKED MODE: Global Rotation - 只允许色相旋转，锁定饱和度和明度
+                    currentHueDelta = delta;
+                    hueDeltas = {}; // Clear individual overrides
+
+                    // 强制当前拖动的颜色保持原始饱和度和明度（只改变色相）
+                    color.hsl = {
+                        h: currentH,
+                        s: original.s,  // 锁定饱和度
+                        l: original.l   // 锁定明度
+                    };
+
+                    // Update all OTHER colors - 同样保持它们的原始饱和度和明度
+                    colorPicker.colors.forEach((c, index) => {
+                        if (index !== activeIndex) {
+                            let newH = (originalColors[index].h + delta) % 360;
+                            if (newH < 0) newH += 360;
+                            c.hsl = { h: newH, s: originalColors[index].s, l: originalColors[index].l };
+                        }
+                    });
+                } else {
+                    // UNLINKED MODE: Individual Adjustment - 可以自由调整
+                    hueDeltas[original.key] = delta;
+                }
+            });
+
+            colorPicker.on('input:end', () => {
+                // dragging ended
+            });
+        }
+
+        // Convert palette item's RGBA to HSL for display
+        function rgbToHsl(r, g, b) {
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h = 0, s = 0, l = (max + min) / 2;
+            if (max !== min) {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h *= 60;
+            }
+            return { h: h < 0 ? h + 360 : h, s: s * 100, l: l * 100 };
+        }
+
+        // 渲染颜色占比条
+        function renderColorBar(palette) {
+            var colorBar = document.getElementById('color-bar');
+            colorBar.innerHTML = ''; // 清空
+
+            if (!palette || palette.length === 0) {
+                return;
+            }
+
+            // 计算总 count
+            var totalCount = 0;
+            for (var i = 0; i < palette.length; i++) {
+                totalCount += palette[i].count;
+            }
+
+            if (totalCount === 0) return;
+
+            // 取前 10 个颜色，并过滤掉占比太小的（小于 2%）
+            var topColors = palette.slice(0, 10).filter(function (p) {
+                return (p.count / totalCount) >= 0.02;
+            });
+
+            // 重新计算过滤后的总 count
+            var filteredTotal = 0;
+            for (var j = 0; j < topColors.length; j++) {
+                filteredTotal += topColors[j].count;
+            }
+
+            // 生成颜色块
+            for (var k = 0; k < topColors.length; k++) {
+                var p = topColors[k];
+                var percent = Math.round((p.count / filteredTotal) * 100);
+
+                var segment = document.createElement('div');
+                segment.className = 'color-segment';
+                segment.style.width = percent + '%';
+                segment.style.backgroundColor = p.hex;
+
+                // 自定义 tooltip
+                var tooltip = document.createElement('span');
+                tooltip.className = 'tooltip';
+                tooltip.textContent = p.hex + ' (' + percent + '%)';
+                segment.appendChild(tooltip);
+
+                // 鼠标移动时更新 tooltip 位置
+                segment.addEventListener('mousemove', function (e) {
+                    var tip = this.querySelector('.tooltip');
+                    if (tip) {
+                        tip.style.left = e.clientX + 'px';
+                        tip.style.top = (e.clientY - 30) + 'px';
+                    }
+                });
+
+                colorBar.appendChild(segment);
+            }
+        }
+
+        function scan() {
+            const msg = {
+                type: 'SCAN_REQUEST',
+                options: {
+                    includeFills: true,
+                    includeStrokes: true,
+                    includeEffects: true
+                }
+            };
+            parent.postMessage({ pluginMessage: msg }, '*');
+
+            errorDiv.textContent = '';
+            statsDiv.textContent = 'Scanning...';
+        }
+
+        function reset() {
+            currentSat = 0;
+            currentLight = 0;
+            currentHueDelta = 0;
+            hueDeltas = {};
+
+            satRange.value = '0';
+            lightRange.value = '0';
+            satVal.textContent = '0';
+            lightVal.textContent = '0';
+
+            // Reset colors
+            if (colorPicker && originalColors.length > 0) {
+                const resetColors = originalColors.map(c => ({ h: c.h, s: c.s, l: c.l }));
+                colorPicker.setColors(resetColors);
+            }
+        }
+
+        // Toggle Lock
+        lockBtn.onclick = () => {
+            isLinked = !isLinked;
+            lockBtn.textContent = isLinked ? '🔗' : '🔓';
+            lockBtn.title = isLinked ? '切换到独立模式' : '切换到联动模式';
+
+            if (isLinked) {
+                hueDeltas = {};
+                // Re-apply global delta to all handles
+                colorPicker.colors.forEach((c, index) => {
+                    let newH = (originalColors[index].h + currentHueDelta) % 360;
+                    if (newH < 0) newH += 360;
+                    c.hsl = { h: newH, s: originalColors[index].s, l: originalColors[index].l };
+                });
+            }
+        };
+
+        // --- Event Listeners ---
+
+        window.onload = () => {
+            initColorWheel();
+            setTimeout(scan, 100);
+        };
+
+        satRange.oninput = () => {
+            currentSat = parseInt(satRange.value) / 100;
+            satVal.textContent = satRange.value;
+        };
+
+        lightRange.oninput = () => {
+            currentLight = parseInt(lightRange.value) / 100;
+            lightVal.textContent = lightRange.value;
+        };
+
+        // Apply
+        applyBtn.onclick = () => {
+            if (!hasScanned) {
+                scan();
+                return;
+            }
+
+            const options = {
+                includeFills: scopeFillsCb.checked,
+                includeStrokes: scopeStrokesCb.checked,
+                includeEffects: true,
+                includeInnerShadows: scopeInnerShadowCb.checked,
+                includeDropShadows: scopeDropShadowCb.checked,
+                keepWhite: keepWhiteCb.checked,
+                keepBlack: keepBlackCb.checked,
+                keepGray: keepGrayCb.checked
+            };
+
+            const msg = {
+                type: 'APPLY_REQUEST',
+                satDelta: currentSat,
+                lightDelta: currentLight,
+                hueDelta: currentHueDelta,
+                colorMapping: Object.keys(hueDeltas).length > 0 ? hueDeltas : undefined,
+                options
+            };
+            parent.postMessage({ pluginMessage: msg }, '*');
+        };
+
+        // Settings Panel
+        settingsBtn.onclick = () => {
+            settingsOverlay.style.display = 'block';
+            setTimeout(() => settingsPanel.classList.add('open'), 10);
+        };
+
+        const closeSettings = () => {
+            settingsPanel.classList.remove('open');
+            setTimeout(() => settingsOverlay.style.display = 'none', 300);
+        };
+
+        closeSettingsBtn.onclick = closeSettings;
+        settingsOverlay.onclick = (e) => {
+            if (e.target === settingsOverlay) closeSettings();
+        };
+
+        resetBtn.onclick = reset;
+        desaturateBtn.onclick = () => {
+            currentSat = -1;
+            satRange.value = '-100';
+            satVal.textContent = '-100';
+        };
+
+        // Message Handling
+        onmessage = (event) => {
+            var eventData = event.data || {};
+            var msg = eventData.pluginMessage;
+            if (!msg || !msg.type) return;
+
+            if (msg.type === 'SCAN_RESULT') {
+                hasScanned = true;
+                var visitedCount = (msg.metrics && msg.metrics.visitedNodes) ? msg.metrics.visitedNodes : 0;
+                var paletteLen = (msg.palette && msg.palette.length) ? msg.palette.length : 0;
+                statsDiv.textContent = 'Scanned ' + visitedCount + ' nodes. Found ' + paletteLen + ' colors.';
+
+                // 更新颜色占比条
+                renderColorBar(msg.palette);
+
+                if (msg.palette && msg.palette.length > 0) {
+                    var colorsToShow = msg.palette.slice(0, 15).map(function (p) {
+                        var hsl = rgbToHsl(p.rgba.r, p.rgba.g, p.rgba.b);
+                        var key = toColorKey(p.rgba.r, p.rgba.g, p.rgba.b, p.rgba.a);
+                        return Object.assign({}, hsl, { key: key });
+                    });
+
+                    colorPicker.setColors(colorsToShow);
+
+                    // Save state
+                    originalColors = JSON.parse(JSON.stringify(colorsToShow));
+                    currentHueDelta = 0;
+                    hueDeltas = {};
+                    activeIndex = -1;
+
+                } else {
+                    // Default to something if no colors
+                    colorPicker.setColors([{ h: 0, s: 0, l: 50 }]);
+                    originalColors = [{ h: 0, s: 0, l: 50, key: '' }];
+                }
+
+            } else if (msg.type === 'APPLY_RESULT') {
+                var modifiedCount = (msg.metrics && msg.metrics.modifiedPaints) ? msg.metrics.modifiedPaints : 0;
+                statsDiv.textContent = 'Done! Modified ' + modifiedCount + ' paints.';
+            } else if (msg.type === 'ERROR') {
+                errorDiv.textContent = msg.message || 'Unknown error';
+            } else if (msg.type === 'PROGRESS') {
+                statsDiv.textContent = 'Processing: ' + msg.processed + ' / ' + msg.total;
+            }
+        };
+
+    </script>
+</body>
+
+</html>

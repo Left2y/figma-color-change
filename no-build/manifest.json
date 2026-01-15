@@ -1,0 +1,10 @@
+{
+    "name": "Left2y-colorchange",
+    "id": "figma-change-color-no-build",
+    "api": "1.0.0",
+    "main": "code.js",
+    "ui": "ui.html",
+    "editorType": [
+        "figma"
+    ]
+}
